@@ -1,0 +1,384 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  account_id    Int       @id @default(autoincrement())
+  account_name  String    @unique @db.VarChar(50)
+  email         String    @unique @db.VarChar(255)
+  password_hash String    @db.VarChar(255)
+  phone         String?   @db.VarChar(20)
+  role          Role      @default(CUSTOMER)
+  dateOfBirth   DateTime? @db.Date
+  gender        String?   @db.VarChar(10)
+  is_active     Boolean   @default(true)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  avatar_url    String?   @db.VarChar(500)
+
+  events        Event[]
+  reviews       Reviews[]
+  invoices      Invoice[]
+  payments      Payment[]
+  notifications Notification[]
+
+  @@map("accounts")
+}
+
+model ServiceType {
+  service_type_id   Int      @id @default(autoincrement())
+  service_type_name String   @db.VarChar(255)
+  category          String   @db.VarChar(255)
+  description       String?  @db.Text
+  is_active         Boolean  @default(true)
+  created_at        DateTime @default(now())
+
+  services Service[]
+
+  @@index([category])
+  @@map("service_types")
+}
+
+model Service {
+  service_id      Int      @id @default(autoincrement())
+  service_name    String   @db.VarChar(1024)
+  description     String?  @db.Text
+  setup_time      Int?     @db.Integer // Setup time in minutes
+  is_available    Boolean  @default(true)
+  is_active       Boolean  @default(true)
+  updated_at      DateTime @updatedAt
+  service_type_id Int?
+
+  service_type   ServiceType?    @relation(fields: [service_type_id], references: [service_type_id], onDelete: SetNull)
+  variations     Variation[]
+  images         Image[]         @relation("ServiceImages")
+  reviews        Reviews[]       @relation("ServiceReviews")
+  event_services EventService[]
+  InvoiceDetail  InvoiceDetail[]
+
+  @@index([service_type_id])
+  @@index([is_available])
+  @@map("services")
+}
+
+model Variation {
+  variation_id   Int      @id @default(autoincrement())
+  variation_name String   @db.VarChar(255)
+  base_price     Decimal  @db.Decimal(10, 2)
+  duration_hours Int?     @db.Integer
+  is_active      Boolean  @default(true)
+  updated_at     DateTime @updatedAt
+  service_id     Int
+  image_url      String? @db.VarChar(500)
+  image_public_id String? @db.VarChar(500)
+
+  service         Service         @relation(fields: [service_id], references: [service_id], onDelete: Cascade)
+  pricing_tiers   PricingTier[]
+  invoice_details InvoiceDetail[]
+  event_services  EventService[]
+
+  @@index([service_id])
+  @@index([is_active])
+  @@map("variations")
+}
+
+model PricingTier {
+  tier_id        Int      @id @default(autoincrement())
+  price_modifier Decimal  @db.Decimal(10, 2)
+  valid_from     DateTime @db.Date
+  valid_to       DateTime @db.Date
+  is_active      Boolean  @default(true)
+  variation_id   Int
+
+  variation Variation @relation(fields: [variation_id], references: [variation_id], onDelete: Cascade)
+
+  @@index([variation_id])
+  @@index([valid_from, valid_to])
+  @@index([is_active])
+  @@map("pricing_tiers")
+}
+
+model Notification {
+  notification_id Int              @id @default(autoincrement())
+  title           String           @db.VarChar(255)
+  message         String           @db.Text
+  is_read         Boolean          @default(false)
+  type            NotificationType @default(REMINDER)
+  sent_at         DateTime         @default(now()) @db.Timestamp(6)
+  account_id      Int?
+
+  account Account? @relation(fields: [account_id], references: [account_id], onDelete: SetNull)
+
+  @@index([account_id])
+  @@index([sent_at]) // Thêm index cho lọc theo thời gian
+  @@map("notifications")
+}
+
+model Room {
+  room_id        Int        @id @default(autoincrement())
+  room_name      String     @db.VarChar(1024)
+  status         RoomStatus @default(AVAILABLE)
+  guest_capacity Int?
+  base_price     Decimal?   @db.Decimal(10, 2)
+  hourly_rate    Decimal?   @db.Decimal(10, 2)
+  description    String?    @db.VarChar(1024)
+  amenities      String?    @db.Text
+  is_active      Boolean    @default(true)
+  created_at     DateTime   @default(now())
+  updated_at     DateTime   @updatedAt
+
+  events Event[]
+  images Image[] @relation("RoomImages")
+
+  @@index([status])
+  @@index([guest_capacity])
+  @@index([created_at])
+  @@map("rooms")
+}
+
+model EventType {
+  type_id     Int      @id @default(autoincrement())
+  type_name   String   @db.VarChar(255)
+  description String?  @db.Text
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+
+  events Event[]
+
+  @@index([created_at]) // Thêm index cho lọc theo thời gian
+  @@map("event_types")
+}
+
+model Event {
+  event_id    Int       @id @default(autoincrement())
+  event_name  String    @db.VarChar(1024)
+  description String?   @db.Text
+  start_time  DateTime? @db.Timestamp(6)
+  end_time    DateTime? @db.Timestamp(6)
+  event_date  DateTime  @db.Date
+
+  estimated_cost   Decimal?    @db.Decimal(10, 2)
+  final_cost       Decimal?    @db.Decimal(10, 2)
+  room_service_fee Decimal?    @db.Decimal(10, 2)
+  date_create      DateTime    @default(now()) @db.Timestamp(6)
+  updated_at       DateTime    @updatedAt
+  status           EventStatus @default(PENDING)
+  account_id       Int?
+  room_id          Int?
+  event_type_id    Int?
+
+  account        Account?       @relation(fields: [account_id], references: [account_id], onDelete: SetNull)
+  room           Room?          @relation(fields: [room_id], references: [room_id], onDelete: SetNull)
+  event_type     EventType?     @relation(fields: [event_type_id], references: [type_id], onDelete: SetNull)
+  event_services EventService[]
+  invoice        Invoice?
+  payments       Payment[]
+  reviews        Reviews[]      @relation("EventReviews")
+
+  @@index([account_id])
+  @@index([room_id])
+  @@index([event_type_id])
+  @@index([event_date])
+  @@index([status])
+  @@index([date_create])
+  @@map("events")
+}
+
+model EventService {
+  event_service_id Int       @id @default(autoincrement())
+  quantity         Int       @default(1)
+  custom_price     Decimal?  @db.Decimal(10, 2)
+  notes            String?   @db.Text
+  status           String    @default("CONFIRMED")
+  scheduled_time   DateTime? @db.Timestamp(6)
+  duration_hours   Int?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+  event_id         Int
+  service_id       Int
+  variation_id     Int?
+
+  event     Event      @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
+  service   Service    @relation(fields: [service_id], references: [service_id], onDelete: Cascade)
+  variation Variation? @relation(fields: [variation_id], references: [variation_id], onDelete: SetNull)
+
+  @@index([event_id])
+  @@index([service_id])
+  @@index([variation_id])
+  @@index([status])
+  @@index([created_at]) // Thêm index cho lọc theo thời gian
+  @@map("event_services")
+}
+
+model Invoice {
+  invoice_id      Int           @id @default(autoincrement())
+  invoice_number  String        @unique @db.VarChar(100)
+  total_amount    Decimal       @db.Decimal(10, 2)
+  tax_amount      Decimal?      @default(0) @db.Decimal(10, 2)
+  discount_amount Decimal?      @default(0) @db.Decimal(10, 2)
+  status          InvoiceStatus @default(PENDING)
+  issue_date      DateTime      @default(now()) @db.Timestamp(6)
+  due_date        DateTime?     @db.Timestamp(6)
+  paid_date       DateTime?     @db.Timestamp(6)
+  notes           String?       @db.Text
+  account_id      Int?
+  event_id        Int           @unique
+
+  account  Account?        @relation(fields: [account_id], references: [account_id], onDelete: SetNull)
+  event    Event           @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
+  details  InvoiceDetail[]
+  payments Payment[]
+
+  @@index([account_id])
+  @@index([status])
+  @@index([issue_date]) // Thêm index cho lọc theo thời gian
+  @@map("invoices")
+}
+
+model InvoiceDetail {
+  invoice_detail_id Int     @id @default(autoincrement())
+  item_name         String  @db.VarChar(255)
+  quantity          Int     @default(1)
+  unit_price        Decimal @db.Decimal(10, 2)
+  subtotal          Decimal @db.Decimal(10, 2)
+  item_type         String  @default("SERVICE")
+  invoice_id        Int
+  service_id        Int?
+  variation_id      Int?
+
+  invoice   Invoice    @relation(fields: [invoice_id], references: [invoice_id], onDelete: Cascade)
+  service   Service?   @relation(fields: [service_id], references: [service_id], onDelete: SetNull)
+  variation Variation? @relation(fields: [variation_id], references: [variation_id], onDelete: SetNull)
+
+  @@index([invoice_id])
+  @@index([service_id])
+  @@index([variation_id])
+  @@map("invoice_details")
+}
+
+model Payment {
+  payment_id        Int           @id @default(autoincrement())
+  amount            Decimal       @db.Decimal(10, 2)
+  payment_method    PaymentMethod
+  payment_status    PaymentStatus @default(PENDING)
+  transaction_id    String?       @db.VarChar(255)
+  stripe_payment_id String?       @db.VarChar(255)
+  payment_date      DateTime      @default(now()) @db.Timestamp(6)
+  notes             String?       @db.Text
+  account_id        Int?
+  invoice_id        Int?
+  event_id          Int?
+
+  account Account? @relation(fields: [account_id], references: [account_id], onDelete: SetNull)
+  invoice Invoice? @relation(fields: [invoice_id], references: [invoice_id], onDelete: SetNull)
+  event   Event?   @relation(fields: [event_id], references: [event_id], onDelete: SetNull)
+
+  @@index([account_id])
+  @@index([invoice_id])
+  @@index([event_id])
+  @@index([payment_status])
+  @@index([payment_date]) // Thêm index cho lọc theo thời gian
+  @@map("payments")
+}
+
+model Reviews {
+  review_id   Int      @id @default(autoincrement())
+  rate        Int      @db.SmallInt
+  comment     String?  @db.Text
+  review_date DateTime @default(now()) @db.Timestamp(6)
+  is_verified Boolean  @default(false)
+  account_id  Int
+  service_id  Int?
+  event_id    Int?
+
+  account Account  @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  service Service? @relation("ServiceReviews", fields: [service_id], references: [service_id], onDelete: SetNull)
+  event   Event?   @relation("EventReviews", fields: [event_id], references: [event_id], onDelete: SetNull)
+
+  @@index([account_id])
+  @@index([service_id])
+  @@index([event_id])
+  @@index([review_date]) // Thêm index cho lọc theo thời gian
+  @@map("reviews")
+}
+
+model Image {
+  image_id   Int      @id @default(autoincrement())
+  image_url  String   @db.VarChar(500)
+  alt_text   String?  @db.VarChar(255)
+  is_primary Boolean  @default(false)
+  sort_order Int?     @default(0)
+  created_at DateTime @default(now())
+  service_id Int?
+  room_id    Int?
+
+  image_public_id  String?  @db.VarChar(255)
+
+  service Service? @relation("ServiceImages", fields: [service_id], references: [service_id], onDelete: Cascade)
+  room    Room?    @relation("RoomImages", fields: [room_id], references: [room_id], onDelete: Cascade)
+
+  @@index([service_id])
+  @@index([room_id])
+  @@index([is_primary])
+  @@index([created_at]) // Thêm index cho lọc theo thời gian
+  @@map("images")
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+  PROVIDER
+  STAFF
+}
+
+enum EventStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+  RESERVED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  CASH
+  PAYPAL
+  STRIPE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum NotificationType {
+  CONFIRMATION
+  REMINDER
+  COMPLETED
+}
