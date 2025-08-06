@@ -11,10 +11,14 @@ import { uploadImage, deleteImageFromCloud } from "../utils/cloudinary.js";
 export async function createRoom(data, imageFiles = []) {
   try {
     // Convert fields to correct types
-    if (data.guest_capacity !== undefined) data.guest_capacity = Number(data.guest_capacity);
-    if (data.base_price !== undefined) data.base_price = Number(data.base_price);
-    if (data.hourly_rate !== undefined) data.hourly_rate = Number(data.hourly_rate);
-    if (data.is_active !== undefined) data.is_active = data.is_active === "true" || data.is_active === true;
+    if (data.guest_capacity !== undefined)
+      data.guest_capacity = Number(data.guest_capacity);
+    if (data.base_price !== undefined)
+      data.base_price = Number(data.base_price);
+    if (data.hourly_rate !== undefined)
+      data.hourly_rate = Number(data.hourly_rate);
+    if (data.is_active !== undefined)
+      data.is_active = data.is_active === "true" || data.is_active === true;
 
     validateObject(data, ["room_name"]);
     // 1. Create the room
@@ -156,21 +160,31 @@ export async function getAllRooms(query) {
 }
 
 // UPDATE ROOM with images
-export async function updateRoom(room_id, data, imageFiles = [], removeOldImages = false) {
+export async function updateRoom(
+  room_id,
+  data,
+  imageFiles = [],
+  removeOldImages = false
+) {
   try {
     // Convert fields to correct types
-    if (data.guest_capacity !== undefined) data.guest_capacity = Number(data.guest_capacity);
-    if (data.base_price !== undefined) data.base_price = Number(data.base_price);
-    if (data.hourly_rate !== undefined) data.hourly_rate = Number(data.hourly_rate);
-    if (data.is_active !== undefined) data.is_active = data.is_active === "true" || data.is_active === true;
+    if (data.guest_capacity !== undefined)
+      data.guest_capacity = Number(data.guest_capacity);
+    if (data.base_price !== undefined)
+      data.base_price = Number(data.base_price);
+    if (data.hourly_rate !== undefined)
+      data.hourly_rate = Number(data.hourly_rate);
+    if (data.is_active !== undefined)
+      data.is_active = data.is_active === "true" || data.is_active === true;
 
-    
     const roomIdNum = Number(room_id);
     validateNumber(roomIdNum);
 
     // Optionally remove old images
     if (removeOldImages) {
-      const oldImages = await prisma.image.findMany({ where: { room_id: roomIdNum } });
+      const oldImages = await prisma.image.findMany({
+        where: { room_id: roomIdNum },
+      });
       for (const img of oldImages) {
         if (img.image_public_id) {
           await deleteImageFromCloud(img.image_public_id);
@@ -248,12 +262,21 @@ export async function restoreRoom(room_id) {
 }
 
 // CHECK ROOM AVAILABILITY
-export async function checkRoomAvailability(room_id, start_time, end_time, duration_hours) {
+export async function checkRoomAvailability(
+  room_id,
+  start_time,
+  end_time,
+  duration_hours
+) {
   try {
     const roomIdNum = Number(room_id);
     validateNumber(room_id);
     if (!start_time || !end_time) {
-      return { isValid: false, data: null, errors: ["start_time and end_time are required"] };
+      return {
+        isValid: false,
+        data: null,
+        errors: ["start_time and end_time are required"],
+      };
     }
 
     const conflicting = await prisma.event.findFirst({
