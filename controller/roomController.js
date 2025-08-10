@@ -5,16 +5,17 @@ import {
   getRoomById,
   deleteRoom,
   checkRoomAvailability,
-  restoreRoom
+  restoreRoom,
 } from "../service/room.service.js";
 
 // Create a new room
 export const createRoomController = async (req, res) => {
   try {
     const roomData = req.body;
-    // Handle single image upload (multer.single("image"))
-    const imageFiles = req.file ? [req.file] : [];
-    // If you use upload.array("images"), use: const imageFiles = req.files || [];
+
+    // Handle multiple image upload
+    const imageFiles = req.files || [];
+
     const result = await createRoom(roomData, imageFiles);
 
     if (!result.isValid) {
@@ -44,10 +45,15 @@ export const updateRoomController = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     // Handle single image upload (multer.single("image"))
-    const imageFiles = req.file ? [req.file] : [];
+    const imageFiles = req.files || [];
     // If you want to remove old images, pass true as third argument
     const removeOldImages = req.body.removeOldImages === "true";
-    const result = await updateRoom(id, updateData, imageFiles, removeOldImages);
+    const result = await updateRoom(
+      id,
+      updateData,
+      imageFiles,
+      removeOldImages
+    );
 
     if (!result.isValid) {
       return res.status(400).json({
@@ -75,7 +81,12 @@ export const getAllRoomsController = async (req, res) => {
   try {
     const filters = {
       status: req.query.status,
-      isActive: req.query.isActive === "true" ? true : req.query.isActive === "false" ? false : undefined,
+      isActive:
+        req.query.isActive === "true"
+          ? true
+          : req.query.isActive === "false"
+          ? false
+          : undefined,
       includeInactive: req.query.includeInactive === "true",
       guestCapacityMin: req.query.guestCapacityMin,
       guestCapacityMax: req.query.guestCapacityMax,
@@ -180,7 +191,12 @@ export const checkRoomAvailabilityController = async (req, res) => {
     const end_time = req.query.end_time;
     const duration_hours = req.query.duration_hours;
 
-    const result = await checkRoomAvailability(id, start_time, end_time, duration_hours);
+    const result = await checkRoomAvailability(
+      id,
+      start_time,
+      end_time,
+      duration_hours
+    );
 
     if (!result.isValid) {
       return res.status(400).json({

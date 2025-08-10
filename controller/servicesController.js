@@ -18,14 +18,17 @@ import { isValidId } from '../utils/validation.js';
 import { validateToken } from '../middleware/authMiddleware.js';
 export const createService = async (req, res) => {
   try {
-    const validation = validateServiceData(req.body, req.file);
+    const validation = validateServiceData(req.body, req.files); // pass files array
     if (!validation.isValid) return sendResponse(res, 422, validation.errors);
     if (!validation.sanitizedData || !validation.sanitizedData.service_name)
       return sendResponse(res, 400, 'Missing or invalid service_name.');
 
-    const result = await createServiceQuery(validation.sanitizedData, req.file);
+    const result = await createServiceQuery(
+      validation.sanitizedData,
+      req.files
+    );
     if (!result.isValid) return sendResponse(res, 500, result.errors);
-    return sendResponse(res, 201, 'Service created successfully', result.data);
+    return sendResponse(res, 201, "Service created successfully", result.data);
   } catch (error) {
     return sendResponse(res, 500, error.message);
   }
@@ -35,12 +38,13 @@ export const getAllServices = async (req, res) => {
   try {
     const validation = validateServiceFilters(req.query);
     if (!validation.isValid) return sendResponse(res, 422, validation.errors);
-    const result = await getAllServicesQuery(validation.data);
+
+    const result = await getAllServicesQuery(validation.sanitizedData);
     if (!result.isValid) return sendResponse(res, 500, result.errors);
     return sendResponse(
       res,
       200,
-      'Services retrieved successfully',
+      "Services retrieved successfully",
       result.data
     );
   } catch (error) {
@@ -69,18 +73,21 @@ export const getServiceById = async (req, res) => {
 export const updateService = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!isValidId(id)) return sendResponse(res, 400, 'Invalid service ID');
+    console.log(req.files);
+    if (!isValidId(id)) return sendResponse(res, 400, "Invalid service ID");
 
-    const validation = validateServiceData(req.body, req.file);
+    // Pass req.files (array) instead of req.file
+    const validation = validateServiceData(req.body, req.files);
+
     if (!validation.isValid) return sendResponse(res, 422, validation.errors);
 
     const result = await updateServiceQuery(
       parseInt(id),
       validation.sanitizedData,
-      req.file
+      req.files
     );
     if (!result.isValid) return sendResponse(res, 500, result.errors);
-    return sendResponse(res, 200, 'Service updated successfully', result.data);
+    return sendResponse(res, 200, "Service updated successfully", result.data);
   } catch (error) {
     return sendResponse(res, 500, error.message);
   }
@@ -89,11 +96,11 @@ export const updateService = async (req, res) => {
 export const deleteService = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!isValidId(id)) return sendResponse(res, 400, 'Invalid service ID');
+    if (!isValidId(id)) return sendResponse(res, 400, "Invalid service ID");
 
     const result = await deleteServiceQuery(parseInt(id), req.query);
     if (!result.isValid) return sendResponse(res, 404, result.errors);
-    return sendResponse(res, 200, 'Service deleted successfully', result.data);
+    return sendResponse(res, 200, "Service deleted successfully", result.data);
   } catch (error) {
     return sendResponse(res, 500, error.message);
   }
@@ -104,10 +111,11 @@ export const advancedSearchServices = async (req, res) => {
     const { query, ...filters } = req.query;
     const validation = validateServiceFilters(filters);
     if (!validation.isValid) return sendResponse(res, 422, validation.errors);
+    if (!validation.isValid) return sendResponse(res, 422, validation.errors);
 
     const result = await advancedSearchServicesQuery(req.query);
     if (!result.isValid) return sendResponse(res, 500, result.errors);
-    return sendResponse(res, 200, 'Advanced search completed', result.data);
+    return sendResponse(res, 200, "Advanced search completed", result.data);
   } catch (error) {
     return sendResponse(res, 500, error.message);
   }
@@ -117,7 +125,7 @@ export const getServicesDashboard = async (req, res) => {
   try {
     const result = await getServicesDashboardQuery(req.query);
     if (!result.isValid) return sendResponse(res, 500, result.errors);
-    return sendResponse(res, 200, 'Dashboard data retrieved', result.data);
+    return sendResponse(res, 200, "Dashboard data retrieved", result.data);
   } catch (error) {
     return sendResponse(res, 500, error.message);
   }
@@ -141,9 +149,14 @@ export const bulkUpdateServices = [
       }
 
       const invalidInputs = serviceIds.filter(
-        (id) => id === null || id === undefined || id === ''
+        (id) => id === null || id === undefined || id === ""
       );
       if (invalidInputs.length) {
+        return sendResponse(
+          res,
+          400,
+          `Invalid service IDs: ${JSON.stringify(invalidInputs)}`
+        );
         return sendResponse(
           res,
           400,
@@ -153,7 +166,14 @@ export const bulkUpdateServices = [
 
       const numericServiceIds = serviceIds.map((id) => Number(id));
       const invalidIds = numericServiceIds.filter((id) => !isValidId(id));
+      const numericServiceIds = serviceIds.map((id) => Number(id));
+      const invalidIds = numericServiceIds.filter((id) => !isValidId(id));
       if (invalidIds.length) {
+        return sendResponse(
+          res,
+          400,
+          `Invalid service IDs: ${JSON.stringify(invalidIds)}`
+        );
         return sendResponse(
           res,
           400,
@@ -170,6 +190,10 @@ export const bulkUpdateServices = [
         numericServiceIds,
         validation.sanitizedData
       );
+      const result = await bulkUpdateServicesQuery(
+        numericServiceIds,
+        validation.sanitizedData
+      );
       if (!result.isValid) {
         return sendResponse(res, 400, result.errors);
       }
@@ -180,11 +204,12 @@ export const bulkUpdateServices = [
       return sendResponse(res, 500, `Internal server error: ${error.message}`);
     }
   },
+  },
 ];
 
 export const exportServices = async (req, res) => {
   try {
-    const { format = 'json' } = req.query;
+    const { format = "json" } = req.query;
     const result = await getAllServicesQuery({
       ...req.query,
       limit: 1000,
@@ -204,7 +229,7 @@ export const exportServices = async (req, res) => {
       review_count: service.reviewCount,
       variation_count: service.variations?.length || 0,
       image_count: service.images?.length || 0,
-      tags: service.tags?.join(', ') || '',
+      tags: service.tags?.join(", ") || "",
       created_at: service.created_at,
       updated_at: service.updated_at,
     }));
