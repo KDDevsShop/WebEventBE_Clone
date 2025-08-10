@@ -32,7 +32,7 @@ router.put(
   "/:id",
   validateToken,
   validateAdmin,
-  upload.single("image"),
+  upload.array("image"),
   updateRoomController
 );
 router.delete("/:id", validateToken, validateAdmin, deleteRoomController);

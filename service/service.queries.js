@@ -1,19 +1,19 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 import {
   handleImageUpload,
   calculateAverageRating,
   getServiceStatistics,
-} from './service.utils.js';
+} from "./service.utils.js";
 import {
   createValidationResult,
   parseAndValidateId,
   handleError,
-} from '../utils/validation.js';
-import { getServiceTypeByName } from './serviceType.service.js';
+} from "../utils/validation.js";
+import { getServiceTypeByName } from "./serviceType.service.js";
 
 const prisma = new PrismaClient();
 
-export const createServiceQuery = async (serviceData, imageFile) => {
+export const createServiceQuery = async (serviceData, imageFiles) => {
   try {
     const {
       service_name,
@@ -23,15 +23,22 @@ export const createServiceQuery = async (serviceData, imageFile) => {
       is_active,
       service_type_id,
     } = serviceData;
-    let imageUrl = null;
-    let imagePublicId = null;
-    if (imageFile) {
-      const uploadResult = await handleImageUpload(
-        imageFile,
-        `services/${service_name.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`
-      );
-      imageUrl = uploadResult.secure_url;
-      imagePublicId = uploadResult.public_id;
+
+    let imagesData = [];
+    if (imageFiles && imageFiles.length > 0) {
+      for (const [index, file] of imageFiles.entries()) {
+        const uploadResult = await handleImageUpload(
+          file,
+          `services/${service_name.replace(
+            /[^a-zA-Z0-9]/g,
+            "_"
+          )}_${Date.now()}_${index}`
+        );
+        imagesData.push({
+          image_url: uploadResult.secure_url,
+          image_public_id: uploadResult.image_public_id,
+        });
+      }
     }
 
     const newService = await prisma.$transaction(async (tx) => {
@@ -45,7 +52,7 @@ export const createServiceQuery = async (serviceData, imageFile) => {
           service_type: service_type_id
             ? { connect: { service_type_id: Number(service_type_id) } }
             : undefined,
-          images: imageUrl ? { create: [{ image_url: imageUrl }] } : undefined,
+          images: imagesData.length > 0 ? { create: imagesData } : undefined,
         },
         include: {
           images: true,
@@ -69,7 +76,7 @@ export const createServiceQuery = async (serviceData, imageFile) => {
       variationCount: newService.variations?.length || 0,
     });
   } catch (error) {
-    return handleError('createServiceQuery', error);
+    return handleError("createServiceQuery", error);
   }
 };
 
@@ -112,7 +119,7 @@ export const getAllServicesQuery = async (filters = {}) => {
 
     if (search?.trim()) {
       const searchConditions = searchFields.map((field) => ({
-        [field]: { contains: search.trim(), mode: 'insensitive' },
+        [field]: { contains: search.trim(), mode: "insensitive" },
       }));
       where.OR = searchConditions;
     }
@@ -175,7 +182,7 @@ export const getAllServicesQuery = async (filters = {}) => {
             include: {
               user: { select: { user_id: true, username: true, avatar: true } },
             },
-            orderBy: { review_date: 'desc' },
+            orderBy: { review_date: "desc" },
           }
         : { select: { rate: true } },
     };
@@ -184,8 +191,8 @@ export const getAllServicesQuery = async (filters = {}) => {
     const limitNum = Number(limit) > 0 ? Number(limit) : 10;
     const skip = (pageNum - 1) * limitNum;
     const orderByObj = {
-      [sortBy || 'updated_at']:
-        sortOrder?.toLowerCase() === 'asc' ? 'asc' : 'desc',
+      [sortBy || "updated_at"]:
+        sortOrder?.toLowerCase() === "asc" ? "asc" : "desc",
     };
 
     const [services, totalCount] = await Promise.all([
@@ -258,15 +265,15 @@ export const getAllServicesQuery = async (filters = {}) => {
       },
     });
   } catch (error) {
-    return handleError('getAllServicesQuery', error);
+    return handleError("getAllServicesQuery", error);
   }
 };
 
 export const getServiceByIdQuery = async (serviceId, options) => {
   try {
-    const validServiceId = parseAndValidateId(serviceId, 'Service ID');
+    const validServiceId = parseAndValidateId(serviceId, "Service ID");
     if (!validServiceId)
-      return createValidationResult(false, ['Invalid Service ID.']);
+      return createValidationResult(false, ["Invalid Service ID."]);
 
     const {
       includeReviews = true,
@@ -299,24 +306,27 @@ export const getServiceByIdQuery = async (serviceId, options) => {
                 },
               },
             },
-            orderBy: { review_date: 'desc' },
+            orderBy: { review_date: "desc" },
           }
         : { select: { rate: true } },
     };
 
     const service = await prisma.service.findUnique({
       where: { service_id: validServiceId },
-      include,
+      include: {
+        images: true, // important to include images!
+        // variations, etc. if needed
+      },
     });
 
-    if (!service) return createValidationResult(false, ['Service not found.']);
+    if (!service) return createValidationResult(false, ["Service not found."]);
 
     const result = {
       ...service,
       averageRating: calculateAverageRating(service.reviews),
       reviewCount: service.reviews?.length || 0,
       variationCount: service.variations?.length || 0,
-      tags: service.tags ? service.tags.split(',').filter(Boolean) : [],
+      tags: service.tags ? service.tags.split(",").filter(Boolean) : [],
     };
 
     if (includeStats) {
@@ -349,28 +359,28 @@ export const getServiceByIdQuery = async (serviceId, options) => {
         averageRating: calculateAverageRating(s.reviews),
         reviewCount: s.reviews?.length || 0,
         variationCount: s.variations?.length || 0,
-        tags: s.tags ? s.tags.split(',').filter(Boolean) : [],
+        tags: s.tags ? s.tags.split(",").filter(Boolean) : [],
       }));
     }
 
     return createValidationResult(true, [], result);
   } catch (error) {
-    return handleError('getServiceByIdQuery', error);
+    return handleError("getServiceByIdQuery", error);
   }
 };
 
 export const updateServiceQuery = async (serviceId, updateData, imageFile) => {
   try {
-    const validServiceId = parseAndValidateId(serviceId, 'Service ID');
+    const validServiceId = parseAndValidateId(serviceId, "Service ID");
     if (!validServiceId)
-      return createValidationResult(false, ['Invalid Service ID.']);
+      return createValidationResult(false, ["Invalid Service ID."]);
 
     const existingService = await prisma.service.findUnique({
       where: { service_id: validServiceId },
       include: { images: true },
     });
     if (!existingService)
-      return createValidationResult(false, ['Service not found.']);
+      return createValidationResult(false, ["Service not found."]);
 
     const {
       service_name,
@@ -382,15 +392,19 @@ export const updateServiceQuery = async (serviceId, updateData, imageFile) => {
       replaceImages,
     } = updateData;
     let imageUrl = null;
-    if (imageFile) {
-      const uploadResult = await handleImageUpload(
-        imageFile,
-        `services/${(service_name || existingService.service_name).replace(
-          /[^a-zA-Z0-9]/g,
-          '_'
-        )}_${Date.now()}`
+    console.log(imageFile);
+    if (imageFile && imageFile.length > 0) {
+      const uploadPromises = imageFile.map((file) =>
+        handleImageUpload(
+          file,
+          `services/${(service_name || existingService.service_name).replace(
+            /[^a-zA-Z0-9]/g,
+            "_"
+          )}_${Date.now()}`
+        )
       );
-      imageUrl = uploadResult.secure_url;
+      const uploadResults = await Promise.all(uploadPromises);
+      const imageUrls = uploadResults.map((res) => res.secure_url);
     }
 
     const updateFields = {};
@@ -446,15 +460,15 @@ export const updateServiceQuery = async (serviceId, updateData, imageFile) => {
       variationCount: updatedService.variations?.length || 0,
     });
   } catch (error) {
-    return handleError('updateServiceQuery', error);
+    return handleError("updateServiceQuery", error);
   }
 };
 
 export const deleteServiceQuery = async (serviceId, options) => {
   try {
-    const validServiceId = parseAndValidateId(serviceId, 'Service ID');
+    const validServiceId = parseAndValidateId(serviceId, "Service ID");
     if (!validServiceId)
-      return createValidationResult(false, ['Invalid Service ID.']);
+      return createValidationResult(false, ["Invalid Service ID."]);
 
     const { forceDelete = false } = options;
 
@@ -467,7 +481,7 @@ export const deleteServiceQuery = async (serviceId, options) => {
       },
     });
     if (!existingService)
-      return createValidationResult(false, ['Service not found.']);
+      return createValidationResult(false, ["Service not found."]);
 
     const hasDependencies =
       existingService.variations.length > 0 ||
@@ -494,7 +508,8 @@ export const deleteServiceQuery = async (serviceId, options) => {
       }
       if (existingService.images.length > 0) {
         for (const image of existingService.images) {
-          if (image.public_id) await deleteImageFromCloud(image.public_id);
+          if (image.image_public_id)
+            await deleteImageFromCloud(image.image_public_id);
         }
       }
       await tx.service.delete({ where: { service_id: validServiceId } });
@@ -502,7 +517,7 @@ export const deleteServiceQuery = async (serviceId, options) => {
 
     return createValidationResult(true, [], { serviceId: validServiceId });
   } catch (error) {
-    return handleError('deleteServiceQuery', error);
+    return handleError("deleteServiceQuery", error);
   }
 };
 
@@ -513,7 +528,7 @@ export const bulkUpdateServicesQuery = async (
 ) => {
   try {
     if (!Array.isArray(serviceIds) || !serviceIds.length) {
-      return createValidationResult(false, ['Service IDs array is required.']);
+      return createValidationResult(false, ["Service IDs array is required."]);
     }
 
     const validIds = [];
@@ -521,7 +536,7 @@ export const bulkUpdateServicesQuery = async (
 
     // Validate IDs
     for (const id of serviceIds) {
-      const parsed = parseAndValidateId(id, 'Service ID');
+      const parsed = parseAndValidateId(id, "Service ID");
       if (parsed !== null) validIds.push(parsed);
       else invalidIds.push(id);
     }
@@ -549,18 +564,18 @@ export const bulkUpdateServicesQuery = async (
       ]);
     }
 
-    const allowedFields = ['is_active', 'is_available', 'service_type_id'];
+    const allowedFields = ["is_active", "is_available", "service_type_id"];
     const updateFields = {};
 
     for (const key of Object.keys(updateData)) {
       if (allowedFields.includes(key)) {
-        if (key === 'service_type_id') {
+        if (key === "service_type_id") {
           const parsedId = parseAndValidateId(
             updateData[key],
-            'Service Type ID'
+            "Service Type ID"
           );
           if (parsedId === null) {
-            return createValidationResult(false, ['Invalid service type ID']);
+            return createValidationResult(false, ["Invalid service type ID"]);
           }
           // Kiểm tra service_type_id tồn tại
           const serviceType = await tx.serviceType.findUnique({
@@ -568,7 +583,7 @@ export const bulkUpdateServicesQuery = async (
             select: { type_id: true },
           });
           if (!serviceType) {
-            return createValidationResult(false, ['Service type not found']);
+            return createValidationResult(false, ["Service type not found"]);
           }
           updateFields[key] = parsedId;
         } else {
@@ -579,7 +594,7 @@ export const bulkUpdateServicesQuery = async (
 
     if (!Object.keys(updateFields).length) {
       return createValidationResult(false, [
-        'No valid update fields provided.',
+        "No valid update fields provided.",
       ]);
     }
 
@@ -595,7 +610,7 @@ export const bulkUpdateServicesQuery = async (
       ...(invalidIds.length ? { invalidIds } : {}),
     });
   } catch (error) {
-    return handleError('bulkUpdateServicesQuery', error);
+    return handleError("bulkUpdateServicesQuery", error);
   }
 };
 
@@ -635,10 +650,10 @@ export const getServicesDashboardQuery = async (filters) => {
         _avg: { rate: true },
       }),
       prisma.service.groupBy({
-        by: ['service_type_id'],
+        by: ["service_type_id"],
         where,
         _count: true,
-        orderBy: { _count: { service_type_id: 'desc' } },
+        orderBy: { _count: { service_type_id: "desc" } },
       }),
       prisma.service.findMany({
         where,
@@ -653,7 +668,7 @@ export const getServicesDashboardQuery = async (filters) => {
             },
           },
         },
-        orderBy: { review_date: 'desc' },
+        orderBy: { review_date: "desc" },
         take: 5,
       }),
       prisma.service.findMany({
@@ -669,7 +684,7 @@ export const getServicesDashboardQuery = async (filters) => {
             },
           },
         },
-        orderBy: { reviews: { _count: 'desc' } },
+        orderBy: { reviews: { _count: "desc" } },
         take: 5,
       }),
     ]);
@@ -696,17 +711,17 @@ export const getServicesDashboardQuery = async (filters) => {
         averageRating: calculateAverageRating(service.reviews),
         reviewCount: service.reviews?.length || 0,
         variationCount: service.variations?.length || 0,
-        tags: service.tags ? service.tags.split(',').filter(Boolean) : [],
+        tags: service.tags ? service.tags.split(",").filter(Boolean) : [],
       })),
       topRatedServices: topRatedServices.map((service) => ({
         ...service,
         averageRating: calculateAverageRating(service.reviews),
         reviewCount: service.reviews?.length || 0,
         variationCount: service.variations?.length || 0,
-        tags: service.tags ? service.tags.split(',').filter(Boolean) : [],
+        tags: service.tags ? service.tags.split(",").filter(Boolean) : [],
       })),
     });
   } catch (error) {
-    return handleError('getServicesDashboardQuery', error);
+    return handleError("getServicesDashboardQuery", error);
   }
 };
