@@ -187,6 +187,8 @@ export const getAllServicesQuery = async (filters = {}) => {
         : { select: { rate: true } },
     };
 
+    console.log(include);
+
     const pageNum = Number(page) > 0 ? Number(page) : 1;
     const limitNum = Number(limit) > 0 ? Number(limit) : 10;
     const skip = (pageNum - 1) * limitNum;
