@@ -3,9 +3,9 @@ import {
   validateNumber,
   validateObject,
   validateString,
-} from "../utils/validation.js";
-import { prisma } from "../prisma/prisma.js";
-import { uploadImage, deleteImageFromCloud } from "../utils/cloudinary.js";
+} from '../utils/validation.js';
+import { prisma } from '../prisma/prisma.js';
+import { uploadImage, deleteImageFromCloud } from '../utils/cloudinary.js';
 
 // CREATE ROOM with images
 export async function createRoom(data, imageFiles = []) {
@@ -18,9 +18,9 @@ export async function createRoom(data, imageFiles = []) {
     if (data.hourly_rate !== undefined)
       data.hourly_rate = Number(data.hourly_rate);
     if (data.is_active !== undefined)
-      data.is_active = data.is_active === "true" || data.is_active === true;
+      data.is_active = data.is_active === 'true' || data.is_active === true;
 
-    validateObject(data, ["room_name"]);
+    validateObject(data, ['room_name']);
     // 1. Create the room
     const room = await prisma.room.create({ data });
 
@@ -31,8 +31,8 @@ export async function createRoom(data, imageFiles = []) {
         const uploadResult = await uploadImage(
           file.buffer,
           `rooms/${room.room_id}`,
-          `${room.room_name.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`,
-          { width: 800, height: 600, crop: "fill", quality: "auto" }
+          `${room.room_name.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`,
+          { width: 800, height: 600, crop: 'fill', quality: 'auto' }
         );
         await prisma.image.create({
           data: {
@@ -71,7 +71,7 @@ export async function getRoomById(room_id, options = {}) {
     });
 
     if (!room) {
-      return { isValid: false, data: null, errors: ["Room not found"] };
+      return { isValid: false, data: null, errors: ['Room not found'] };
     }
 
     return { isValid: true, data: room, errors: [] };
@@ -92,8 +92,8 @@ export async function getAllRooms(query) {
       guestCapacityMax,
       page = 1,
       limit = 20,
-      sortBy = "created_at",
-      sortOrder = "asc",
+      sortBy = 'created_at',
+      sortOrder = 'asc',
       includeEvents,
       includeImages,
     } = query;
@@ -106,13 +106,13 @@ export async function getAllRooms(query) {
           ? {
               room_name: {
                 contains: search,
-                mode: "insensitive",
+                mode: 'insensitive',
               },
             }
           : {},
         status ? { status } : {},
         isActive !== undefined
-          ? { is_active: isActive === true || isActive === "true" }
+          ? { is_active: isActive === true || isActive === 'true' }
           : {},
         includeInactive ? {} : { is_active: true },
         guestCapacityMin
@@ -175,7 +175,7 @@ export async function updateRoom(
     if (data.hourly_rate !== undefined)
       data.hourly_rate = Number(data.hourly_rate);
     if (data.is_active !== undefined)
-      data.is_active = data.is_active === "true" || data.is_active === true;
+      data.is_active = data.is_active === 'true' || data.is_active === true;
 
     const roomIdNum = Number(room_id);
     validateNumber(roomIdNum);
@@ -206,8 +206,8 @@ export async function updateRoom(
         const uploadResult = await uploadImage(
           file.buffer,
           `rooms/${room.room_id}`,
-          `${room.room_name.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`,
-          { width: 800, height: 600, crop: "fill", quality: "auto" }
+          `${room.room_name.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`,
+          { width: 800, height: 600, crop: 'fill', quality: 'auto' }
         );
         await prisma.image.create({
           data: {
@@ -275,28 +275,32 @@ export async function checkRoomAvailability(
       return {
         isValid: false,
         data: null,
-        errors: ["start_time and end_time are required"],
+        errors: ['start_time and end_time are required'],
       };
     }
 
     const conflicting = await prisma.event.findFirst({
       where: {
         room_id: Number(room_id),
-        status: { in: ["CONFIRMED", "IN_PROGRESS"] },
-        OR: [
-          {
-            start_time: {
-              lt: new Date(end_time),
-            },
-            end_time: {
-              gt: new Date(start_time),
-            },
-          },
-        ],
+        status: { in: ['CONFIRMED', 'IN_PROGRESS'] },
+        // OR: [
+        //   {
+        //     start_time: {
+        //       lt: new Date(end_time),
+        //     },
+        //     end_time: {
+        //       gt: new Date(start_time),
+        //     },
+        //   },
+        // ],
       },
     });
 
-    return { isValid: true, data: { isAvailable: !conflicting }, errors: [] };
+    return {
+      isValid: true,
+      data: { isAvailable: !conflicting, reason: 'Conflict' },
+      errors: [],
+    };
   } catch (error) {
     return { isValid: false, data: null, errors: [error.message] };
   }
@@ -308,10 +312,10 @@ export async function getRoomStatistics() {
     const [total, available, occupied, maintenance, reserved] =
       await Promise.all([
         prisma.room.count(),
-        prisma.room.count({ where: { status: "AVAILABLE" } }),
-        prisma.room.count({ where: { status: "OCCUPIED" } }),
-        prisma.room.count({ where: { status: "MAINTENANCE" } }),
-        prisma.room.count({ where: { status: "RESERVED" } }),
+        prisma.room.count({ where: { status: 'AVAILABLE' } }),
+        prisma.room.count({ where: { status: 'OCCUPIED' } }),
+        prisma.room.count({ where: { status: 'MAINTENANCE' } }),
+        prisma.room.count({ where: { status: 'RESERVED' } }),
       ]);
 
     return {
@@ -334,7 +338,7 @@ export async function getRoomStatistics() {
 export async function bulkUpdateRooms(roomIds, data) {
   try {
     if (!Array.isArray(roomIds) || roomIds.length === 0) {
-      throw new Error("Invalid roomIds array");
+      throw new Error('Invalid roomIds array');
     }
     const updated = await prisma.room.updateMany({
       where: {

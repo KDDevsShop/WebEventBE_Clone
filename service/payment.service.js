@@ -1,5 +1,5 @@
 // Trong PaymentService.js
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client';
 import Stripe from 'stripe';
 import {
   validateNumber,
@@ -7,9 +7,9 @@ import {
   parseAndValidateId,
   createValidationResult,
   validatePagination,
-} from "../utils/validation.js";
-import { createNotification } from "../utils/notification.js";
-import * as invoiceService from "./invoice.service.js";
+} from '../utils/validation.js';
+import { createNotification } from '../utils/notification.js';
+import * as invoiceService from './invoice.service.js';
 
 const prisma = new PrismaClient();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -22,27 +22,38 @@ const handleError = (context, error) => {
 const validatePaymentData = (paymentData) => {
   const errors = [];
 
-  const amountValidation = validateNumber(paymentData.amount, "Payment amount", {
-    min: 0,
-  });
-  const eventIdValidation = parseAndValidateId(paymentData.event_id, "Event ID");
-  const accountIdValidation = parseAndValidateId(paymentData.account_id, "Account ID");
+  const amountValidation = validateNumber(
+    paymentData.amount,
+    'Payment amount',
+    {
+      min: 0,
+    }
+  );
+  const eventIdValidation = parseAndValidateId(
+    paymentData.event_id,
+    'Event ID'
+  );
+  const accountIdValidation = parseAndValidateId(
+    paymentData.account_id,
+    'Account ID'
+  );
 
   errors.push(...amountValidation.errors);
-  if (typeof eventIdValidation !== 'number') errors.push("Invalid event ID");
-  if (typeof accountIdValidation !== 'number') errors.push("Invalid account ID");
+  if (typeof eventIdValidation !== 'number') errors.push('Invalid event ID');
+  if (typeof accountIdValidation !== 'number')
+    errors.push('Invalid account ID');
 
   if (paymentData.payment_method) {
     const validMethods = ['CREDIT_CARD', 'BANK_TRANSFER', 'CASH', 'STRIPE'];
     if (!validMethods.includes(paymentData.payment_method)) {
-      errors.push("Invalid payment method");
+      errors.push('Invalid payment method');
     }
   }
 
   if (paymentData.status) {
     const validStatuses = ['PENDING', 'COMPLETED', 'FAILED', 'CANCELLED'];
     if (!validStatuses.includes(paymentData.status)) {
-      errors.push("Invalid payment status");
+      errors.push('Invalid payment status');
     }
   }
 
@@ -50,18 +61,18 @@ const validatePaymentData = (paymentData) => {
 };
 
 // Create Stripe Checkout Session
-export const createStripeCheckoutSession = async (userId, cartItems, sm_id, addressId, orderData) => {
+export const createStripeCheckoutSession = async (userId, lineItems) => {
   try {
-    const lineItems = cartItems.map(item => ({
-      price_data: {
-        currency: 'usd',
-        product_data: {
-          name: item.item_name,
-        },
-        unit_amount: Math.round(Number(item.unit_price) * 100),
-      },
-      quantity: Number(item.quantity),
-    }));
+    // const lineItems = cartItems.map((item) => ({
+    //   price_data: {
+    //     currency: 'usd',
+    //     product_data: {
+    //       name: item.item_name,
+    //     },
+    //     unit_amount: Math.round(Number(item.unit_price) * 100),
+    //   },
+    //   quantity: Number(item.quantity),
+    // }));
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -71,15 +82,14 @@ export const createStripeCheckoutSession = async (userId, cartItems, sm_id, addr
       cancel_url: `http://localhost:5173/payment/stripe-pay-callback?status=canceled`,
       metadata: {
         userId: String(userId),
-        sm_id: String(sm_id || ''),
-        addressId: String(addressId || ''),
-        orderData: JSON.stringify(orderData || {}),
       },
     });
 
     return session;
   } catch (error) {
-    throw new Error(`Failed to create Stripe checkout session: ${error.message}`);
+    throw new Error(
+      `Failed to create Stripe checkout session: ${error.message}`
+    );
   }
 };
 
@@ -88,7 +98,9 @@ export const stripeCallbackHandler = async (sessionId) => {
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     return {
-      orderId: session.metadata.orderData ? JSON.parse(session.metadata.orderData).orderId : session.id,
+      orderId: session.metadata.orderData
+        ? JSON.parse(session.metadata.orderData).orderId
+        : session.id,
       paymentIntentId: session.payment_intent,
       amount: session.amount_total / 100,
     };
@@ -100,12 +112,23 @@ export const stripeCallbackHandler = async (sessionId) => {
 // Create Payment
 export const createPayment = async (paymentData) => {
   try {
-    const { event_id, account_id, amount, payment_method = 'CASH', status = 'PENDING', transaction_id, payment_date, invoice_id, stripe_payment_id } = paymentData;
+    const {
+      event_id,
+      account_id,
+      amount,
+      payment_method = 'CASH',
+      status = 'PENDING',
+      transaction_id,
+      payment_date,
+      invoice_id,
+      stripe_payment_id,
+    } = paymentData;
 
     const validationErrors = validatePaymentData(paymentData);
     if (invoice_id) {
-      const invoiceIdValidation = parseAndValidateId(invoice_id, "Invoice ID");
-      if (typeof invoiceIdValidation !== 'number') validationErrors.push("Invalid invoice ID");
+      const invoiceIdValidation = parseAndValidateId(invoice_id, 'Invoice ID');
+      if (typeof invoiceIdValidation !== 'number')
+        validationErrors.push('Invalid invoice ID');
     }
     if (validationErrors.length > 0) {
       return createValidationResult(false, validationErrors);
@@ -116,10 +139,10 @@ export const createPayment = async (paymentData) => {
       select: { event_id: true, status: true, account_id: true },
     });
     if (!event || event.status === 'CANCELLED') {
-      return createValidationResult(false, ["Event not found or cancelled"]);
+      return createValidationResult(false, ['Event not found or cancelled']);
     }
     if (event.account_id !== Number(account_id)) {
-      return createValidationResult(false, ["Account does not match event"]);
+      return createValidationResult(false, ['Account does not match event']);
     }
 
     if (invoice_id) {
@@ -128,10 +151,10 @@ export const createPayment = async (paymentData) => {
         select: { invoice_id: true, status: true },
       });
       if (!invoice) {
-        return createValidationResult(false, ["Invoice not found"]);
+        return createValidationResult(false, ['Invoice not found']);
       }
       if (invoice.status === 'PAID') {
-        return createValidationResult(false, ["Invoice already paid"]);
+        return createValidationResult(false, ['Invoice already paid']);
       }
     }
 
@@ -162,20 +185,28 @@ export const createPayment = async (paymentData) => {
           tx
         );
         if (!invoiceUpdate.isValid) {
-          throw new Error(`Failed to update invoice: ${invoiceUpdate.errors.join(', ')}`);
+          throw new Error(
+            `Failed to update invoice: ${invoiceUpdate.errors.join(', ')}`
+          );
         }
       }
 
       if (status === 'COMPLETED') {
-        const notification = await createNotification({
-          account_id: payment.account_id,
-          title: "Payment Successful",
-          message: `Your payment of ${payment.amount} for event "${payment.event.event_name}" has been processed successfully.`,
-          type: "PAYMENT_SUCCESS",
-        }, tx);
+        const notification = await createNotification(
+          {
+            account_id: payment.account_id,
+            title: 'Payment Successful',
+            message: `Your payment of ${payment.amount} for event "${payment.event.event_name}" has been processed successfully.`,
+            type: 'PAYMENT_SUCCESS',
+          },
+          tx
+        );
 
         if (!notification.isValid) {
-          console.warn("Failed to send payment success notification:", notification.errors);
+          console.warn(
+            'Failed to send payment success notification:',
+            notification.errors
+          );
         }
       }
 
@@ -184,32 +215,46 @@ export const createPayment = async (paymentData) => {
 
     return createValidationResult(true, [], newPayment);
   } catch (error) {
-    return handleError("createPayment", error);
+    return handleError('createPayment', error);
   }
 };
 
 // Update Payment
 export const updatePayment = async (paymentId, updateData) => {
   try {
-    const validPaymentId = parseAndValidateId(paymentId, "Payment ID");
+    const validPaymentId = parseAndValidateId(paymentId, 'Payment ID');
 
     const existingPayment = await prisma.payment.findUnique({
       where: { payment_id: validPaymentId },
     });
     if (!existingPayment) {
-      return createValidationResult(false, ["Payment not found"]);
+      return createValidationResult(false, ['Payment not found']);
     }
 
     const validationErrors = validatePaymentData(updateData);
     if (updateData.invoice_id) {
-      const invoiceIdValidation = parseAndValidateId(updateData.invoice_id, "Invoice ID");
-      if (typeof invoiceIdValidation !== 'number') validationErrors.push("Invalid invoice ID");
+      const invoiceIdValidation = parseAndValidateId(
+        updateData.invoice_id,
+        'Invoice ID'
+      );
+      if (typeof invoiceIdValidation !== 'number')
+        validationErrors.push('Invalid invoice ID');
     }
     if (validationErrors.length > 0) {
       return createValidationResult(false, validationErrors);
     }
 
-    const { event_id, account_id, amount, payment_method, status, transaction_id, payment_date, invoice_id, stripe_payment_id } = updateData;
+    const {
+      event_id,
+      account_id,
+      amount,
+      payment_method,
+      status,
+      transaction_id,
+      payment_date,
+      invoice_id,
+      stripe_payment_id,
+    } = updateData;
 
     if (event_id && event_id !== existingPayment.event_id) {
       const event = await prisma.event.findUnique({
@@ -217,10 +262,10 @@ export const updatePayment = async (paymentId, updateData) => {
         select: { event_id: true, status: true, account_id: true },
       });
       if (!event || event.status === 'CANCELLED') {
-        return createValidationResult(false, ["Event not found or cancelled"]);
+        return createValidationResult(false, ['Event not found or cancelled']);
       }
       if (account_id && event.account_id !== Number(account_id)) {
-        return createValidationResult(false, ["Account does not match event"]);
+        return createValidationResult(false, ['Account does not match event']);
       }
     }
 
@@ -230,10 +275,10 @@ export const updatePayment = async (paymentId, updateData) => {
         select: { invoice_id: true, status: true },
       });
       if (!invoice) {
-        return createValidationResult(false, ["Invoice not found"]);
+        return createValidationResult(false, ['Invoice not found']);
       }
       if (invoice.status === 'PAID') {
-        return createValidationResult(false, ["Invoice already paid"]);
+        return createValidationResult(false, ['Invoice already paid']);
       }
     }
 
@@ -241,12 +286,17 @@ export const updatePayment = async (paymentId, updateData) => {
     if (event_id !== undefined) updateFields.event_id = Number(event_id);
     if (account_id !== undefined) updateFields.account_id = Number(account_id);
     if (amount !== undefined) updateFields.amount = Number(amount);
-    if (payment_method !== undefined) updateFields.payment_method = payment_method;
+    if (payment_method !== undefined)
+      updateFields.payment_method = payment_method;
     if (status !== undefined) updateFields.payment_status = status;
-    if (transaction_id !== undefined) updateFields.transaction_id = transaction_id?.trim();
-    if (payment_date !== undefined) updateFields.payment_date = payment_date ? new Date(payment_date) : null;
-    if (stripe_payment_id !== undefined) updateFields.stripe_payment_id = stripe_payment_id?.trim();
-    if (invoice_id !== undefined) updateFields.invoice_id = invoice_id ? Number(invoice_id) : null;
+    if (transaction_id !== undefined)
+      updateFields.transaction_id = transaction_id?.trim();
+    if (payment_date !== undefined)
+      updateFields.payment_date = payment_date ? new Date(payment_date) : null;
+    if (stripe_payment_id !== undefined)
+      updateFields.stripe_payment_id = stripe_payment_id?.trim();
+    if (invoice_id !== undefined)
+      updateFields.invoice_id = invoice_id ? Number(invoice_id) : null;
 
     const updatedPayment = await prisma.$transaction(async (tx) => {
       const payment = await tx.payment.update({
@@ -259,27 +309,42 @@ export const updatePayment = async (paymentId, updateData) => {
         },
       });
 
-      if (status === 'COMPLETED' && invoice_id && existingPayment.payment_status !== 'COMPLETED') {
+      if (
+        status === 'COMPLETED' &&
+        invoice_id &&
+        existingPayment.payment_status !== 'COMPLETED'
+      ) {
         const invoiceUpdate = await invoiceService.updateInvoice(
           invoice_id,
           { status: 'PAID', paid_at: new Date() },
           tx
         );
         if (!invoiceUpdate.isValid) {
-          throw new Error(`Failed to update invoice: ${invoiceUpdate.errors.join(', ')}`);
+          throw new Error(
+            `Failed to update invoice: ${invoiceUpdate.errors.join(', ')}`
+          );
         }
       }
 
-      if (status === 'COMPLETED' && existingPayment.payment_status !== 'COMPLETED') {
-        const notification = await createNotification({
-          account_id: payment.account_id,
-          title: "Payment Successful",
-          message: `Your payment of ${payment.amount} for event "${payment.event.event_name}" has been processed successfully.`,
-          type: "PAYMENT_SUCCESS",
-        }, tx);
+      if (
+        status === 'COMPLETED' &&
+        existingPayment.payment_status !== 'COMPLETED'
+      ) {
+        const notification = await createNotification(
+          {
+            account_id: payment.account_id,
+            title: 'Payment Successful',
+            message: `Your payment of ${payment.amount} for event "${payment.event.event_name}" has been processed successfully.`,
+            type: 'PAYMENT_SUCCESS',
+          },
+          tx
+        );
 
         if (!notification.isValid) {
-          console.warn("Failed to send payment success notification:", notification.errors);
+          console.warn(
+            'Failed to send payment success notification:',
+            notification.errors
+          );
         }
       }
 
@@ -288,14 +353,14 @@ export const updatePayment = async (paymentId, updateData) => {
 
     return createValidationResult(true, [], updatedPayment);
   } catch (error) {
-    return handleError("updatePayment", error);
+    return handleError('updatePayment', error);
   }
 };
 
 // Get Payment by ID
 export const getPaymentById = async (paymentId) => {
   try {
-    const validPaymentId = parseAndValidateId(paymentId, "Payment ID");
+    const validPaymentId = parseAndValidateId(paymentId, 'Payment ID');
 
     const payment = await prisma.payment.findUnique({
       where: { payment_id: validPaymentId },
@@ -307,30 +372,45 @@ export const getPaymentById = async (paymentId) => {
     });
 
     if (!payment) {
-      return createValidationResult(false, ["Payment not found"]);
+      return createValidationResult(false, ['Payment not found']);
     }
 
     return createValidationResult(true, [], payment);
   } catch (error) {
-    return handleError("getPaymentById", error);
+    return handleError('getPaymentById', error);
   }
 };
 
 // Get All Payments
 export const getAllPayments = async (filters = {}) => {
   try {
-    const { event_id, account_id, status, invoice_id, page = 1, limit = 20, sortBy = 'payment_date', sortOrder = 'asc' } = filters;
+    const {
+      event_id,
+      account_id,
+      status,
+      invoice_id,
+      page = 1,
+      limit = 20,
+      sortBy = 'payment_date',
+      sortOrder = 'asc',
+    } = filters;
 
-    const { page: validPage, limit: validLimit, errors: paginationErrors } = validatePagination(page, limit);
+    const {
+      page: validPage,
+      limit: validLimit,
+      errors: paginationErrors,
+    } = validatePagination(page, limit);
     if (paginationErrors.length > 0) {
       return createValidationResult(false, paginationErrors);
     }
 
     const where = {};
-    if (event_id) where.event_id = parseAndValidateId(event_id, "Event ID");
-    if (account_id) where.account_id = parseAndValidateId(account_id, "Account ID");
+    if (event_id) where.event_id = parseAndValidateId(event_id, 'Event ID');
+    if (account_id)
+      where.account_id = parseAndValidateId(account_id, 'Account ID');
     if (status) where.payment_status = status;
-    if (invoice_id) where.invoice_id = parseAndValidateId(invoice_id, "Invoice ID");
+    if (invoice_id)
+      where.invoice_id = parseAndValidateId(invoice_id, 'Invoice ID');
 
     const skip = (validPage - 1) * validLimit;
     const orderBy = { [sortBy]: sortOrder?.toLowerCase() || 'asc' };
@@ -362,21 +442,21 @@ export const getAllPayments = async (filters = {}) => {
       },
     });
   } catch (error) {
-    return handleError("getAllPayments", error);
+    return handleError('getAllPayments', error);
   }
 };
 
 // Delete Payment
 export const deletePayment = async (paymentId) => {
   try {
-    const validPaymentId = parseAndValidateId(paymentId, "Payment ID");
+    const validPaymentId = parseAndValidateId(paymentId, 'Payment ID');
 
     const existingPayment = await prisma.payment.findUnique({
       where: { payment_id: validPaymentId },
       include: { invoice: { select: { invoice_id: true } } },
     });
     if (!existingPayment) {
-      return createValidationResult(false, ["Payment not found"]);
+      return createValidationResult(false, ['Payment not found']);
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -391,7 +471,9 @@ export const deletePayment = async (paymentId) => {
           tx
         );
         if (!invoiceUpdate.isValid) {
-          throw new Error(`Failed to update invoice: ${invoiceUpdate.errors.join(', ')}`);
+          throw new Error(
+            `Failed to update invoice: ${invoiceUpdate.errors.join(', ')}`
+          );
         }
       }
 
@@ -400,7 +482,7 @@ export const deletePayment = async (paymentId) => {
 
     return createValidationResult(true, [], result);
   } catch (error) {
-    return handleError("deletePayment", error);
+    return handleError('deletePayment', error);
   }
 };
 
@@ -420,17 +502,27 @@ export const getPaymentStats = async (filter = {}) => {
       refundedPayments,
       cancelledPayments,
       totalCompletedAmount,
-      totalRefundedAmount
+      totalRefundedAmount,
     ] = await Promise.all([
       prisma.payment.count({ where }),
       prisma.payment.aggregate({ _sum: { amount: true }, where }),
-      prisma.payment.count({ where: { ...where, payment_status: "COMPLETED" } }),
-      prisma.payment.count({ where: { ...where, payment_status: "PENDING" } }),
-      prisma.payment.count({ where: { ...where, payment_status: "FAILED" } }),
-      prisma.payment.count({ where: { ...where, payment_status: "REFUNDED" } }),
-      prisma.payment.count({ where: { ...where, payment_status: "CANCELLED" } }),
-      prisma.payment.aggregate({ _sum: { amount: true }, where: { ...where, payment_status: "COMPLETED" } }),
-      prisma.payment.aggregate({ _sum: { amount: true }, where: { ...where, payment_status: "REFUNDED" } }),
+      prisma.payment.count({
+        where: { ...where, payment_status: 'COMPLETED' },
+      }),
+      prisma.payment.count({ where: { ...where, payment_status: 'PENDING' } }),
+      prisma.payment.count({ where: { ...where, payment_status: 'FAILED' } }),
+      prisma.payment.count({ where: { ...where, payment_status: 'REFUNDED' } }),
+      prisma.payment.count({
+        where: { ...where, payment_status: 'CANCELLED' },
+      }),
+      prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: { ...where, payment_status: 'COMPLETED' },
+      }),
+      prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: { ...where, payment_status: 'REFUNDED' },
+      }),
     ]);
 
     return {
@@ -445,7 +537,7 @@ export const getPaymentStats = async (filter = {}) => {
       totalRefundedAmount: totalRefundedAmount._sum.amount || 0,
     };
   } catch (error) {
-    console.error("Error in getPaymentStats:", error);
+    console.error('Error in getPaymentStats:', error);
     throw error;
   }
 };

@@ -18,28 +18,13 @@ export const createCheckoutSession = [
   validateToken,
   async (req, res) => {
     try {
-      const {
-        userId,
-        cartItems,
-        sm_id,
-        addressId,
-        orderData,
-        invoice_id,
-        event_id,
-      } = req.body;
+      const { userId, event_id } = req.body;
 
-      if (
-        !userId ||
-        !cartItems ||
-        !Array.isArray(cartItems) ||
-        cartItems.length === 0 ||
-        !invoice_id ||
-        !event_id
-      ) {
+      if (!userId || !event_id) {
         return sendResponse(
           res,
           400,
-          'Missing required parameters: userId, cartItems, invoice_id, or event_id'
+          'Missing required parameters: userId, cartItems, or event_id'
         );
       }
 
@@ -53,8 +38,34 @@ export const createCheckoutSession = [
 
       const event = await prisma.event.findUnique({
         where: { event_id: Number(event_id) },
-        select: { event_id: true, account_id: true, status: true },
+        select: {
+          event_id: true,
+          account_id: true,
+          status: true,
+          estimated_cost: true,
+          room: {
+            select: { room_id: true, room_name: true, base_price: true },
+          },
+          event_services: {
+            select: {
+              service_id: true,
+              variation_id: true,
+              service: {
+                select: {
+                  service_name: true,
+                },
+              },
+              variation: {
+                select: {
+                  variation_name: true,
+                  base_price: true,
+                },
+              },
+            },
+          },
+        },
       });
+
       if (!event || event.status === 'CANCELLED') {
         return sendResponse(res, 404, 'Event not found or cancelled');
       }
@@ -62,8 +73,10 @@ export const createCheckoutSession = [
         return sendResponse(res, 403, 'Event does not belong to user');
       }
 
+      const totalAmount = convertCurrency(Number(event.estimated_cost));
+
       const invoice = await prisma.invoice.findUnique({
-        where: { invoice_id: Number(invoice_id) },
+        where: { event_id: Number(event_id) },
         select: {
           invoice_id: true,
           total_amount: true,
@@ -81,21 +94,46 @@ export const createCheckoutSession = [
         return sendResponse(res, 403, 'Invoice does not belong to user');
       }
 
-      const totalAmount = cartItems.reduce(
-        (sum, item) => sum + Number(item.quantity) * Number(item.unit_price),
-        0
-      );
       if (totalAmount > Number(invoice.total_amount)) {
         return sendResponse(res, 400, 'Cart total exceeds invoice total');
       }
 
+      const currency = 'usd';
+
+      const serviceItems = event.event_services.map((service) => {
+        return {
+          price_data: {
+            currency,
+            product_data: {
+              name: `${service.service.service_name} - ${service.variation.variation_name}`,
+            },
+            unit_amount: Math.round(
+              convertCurrency(Number(service.variation.base_price)) * 100
+            ),
+          },
+          quantity: 1,
+        };
+      });
+
+      const roomItem = {
+        price_data: {
+          currency,
+          product_data: {
+            name: `${event.room.room_name}`,
+          },
+          unit_amount: Math.round(
+            convertCurrency(Number(event.room.base_price)) * 100
+          ),
+        },
+        quantity: 1,
+      };
+
+      const lineItems = [roomItem, ...serviceItems];
+
       // Use your payment service to create the Stripe session
       const stripeResponse = await createStripeCheckoutSession(
         userId,
-        cartItems,
-        sm_id,
-        addressId,
-        orderData
+        lineItems
       );
 
       // Create a pending payment record
@@ -107,7 +145,7 @@ export const createCheckoutSession = [
             payment_status: 'PENDING',
             stripe_payment_id: stripeResponse.id,
             account_id: Number(userId),
-            invoice_id: Number(invoice_id),
+            invoice_id: Number(invoice.invoice_id),
             event_id: Number(event_id),
             payment_date: new Date(),
           },
@@ -329,4 +367,8 @@ export const checkSession = async (req, res) => {
     console.error('Error in checkSession:', error);
     return sendResponse(res, 500, 'Error checking Stripe session');
   }
+};
+
+const convertCurrency = (amount) => {
+  return Math.round(amount / 23000);
 };

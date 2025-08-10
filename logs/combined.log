@@ -64,3 +64,81 @@
 {"level":"warn","message":"Service error: \nInvalid `prisma.event.findMany()` invocation:\n\n{\n  where: {\n    variation_id: 45,\n    ~~~~~~~~~~~~\n?   AND?: EventWhereInput | EventWhereInput[],\n?   OR?: EventWhereInput[],\n?   NOT?: EventWhereInput | EventWhereInput[],\n?   event_id?: IntFilter | Int,\n?   event_name?: StringFilter | String,\n?   description?: StringNullableFilter | String | Null,\n?   start_time?: DateTimeNullableFilter | DateTime | Null,\n?   end_time?: DateTimeNullableFilter | DateTime | Null,\n?   event_date?: DateTimeFilter | DateTime,\n?   estimated_cost?: DecimalNullableFilter | Decimal | Null,\n?   final_cost?: DecimalNullableFilter | Decimal | Null,\n?   room_service_fee?: DecimalNullableFilter | Decimal | Null,\n?   date_create?: DateTimeFilter | DateTime,\n?   updated_at?: DateTimeFilter | DateTime,\n?   status?: EnumEventStatusFilter | EventStatus,\n?   account_id?: IntNullableFilter | Int | Null,\n?   room_id?: IntNullableFilter | Int | Null,\n?   event_type_id?: IntNullableFilter | Int | Null,\n?   account?: AccountNullableScalarRelationFilter | AccountWhereInput | Null,\n?   room?: RoomNullableScalarRelationFilter | RoomWhereInput | Null,\n?   event_type?: EventTypeNullableScalarRelationFilter | EventTypeWhereInput | Null,\n?   event_services?: EventServiceListRelationFilter,\n?   invoice?: InvoiceNullableScalarRelationFilter | InvoiceWhereInput | Null,\n?   payments?: PaymentListRelationFilter,\n?   reviews?: ReviewsListRelationFilter\n  },\n  select: {\n    event_id: true\n  }\n}\n\nUnknown argument `variation_id`. Available options are marked with ?.","timestamp":"2025-07-04T05:23:53.597Z"}
 {"level":"info","message":"Deleting variation with ID: 45","timestamp":"2025-07-04T05:25:30.017Z"}
 {"level":"info","message":"Variation deleted successfully: 45","timestamp":"2025-07-04T05:25:31.397Z"}
+{"level":"info","message":"Fetching variation with ID: service_id=1","timestamp":"2025-08-08T08:32:10.068Z"}
+{"level":"warn","message":"Service error: \nInvalid `prisma.variation.findUnique()` invocation:\n\n{\n  where: {\n+   variation_id: Int\n  },\n  include: {\n    service: {\n      select: {\n        service_id: true,\n        service_name: true,\n        is_active: true,\n        is_available: true\n      }\n    },\n    pricing_tiers: {\n      select: {\n        tier_id: true,\n        price_modifier: true,\n        valid_from: true,\n        valid_to: true,\n        is_active: true,\n        variation_id: true\n      },\n      orderBy: {\n        price_modifier: \"asc\"\n      }\n    }\n  }\n}\n\nArgument `variation_id` must not be null.","timestamp":"2025-08-08T08:32:10.170Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\"}","timestamp":"2025-08-08T08:50:27.701Z"}
+{"level":"info","message":"Retrieved 0 variations","timestamp":"2025-08-08T08:50:27.897Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T03:30:23.451Z"}
+{"level":"info","message":"Retrieved 0 variations","timestamp":"2025-08-09T03:30:23.975Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T07:25:31.558Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:25:31.734Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T07:26:53.463Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:26:53.476Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T07:27:06.202Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:27:06.218Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T07:27:06.414Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:27:06.438Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T07:27:06.698Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:27:06.708Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T07:27:06.979Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:27:06.991Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T07:27:07.442Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:27:07.449Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T07:27:25.245Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:27:25.248Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T07:27:25.967Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:27:25.981Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T07:27:26.187Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:27:26.199Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T07:27:26.479Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:27:26.482Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T07:27:26.606Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:27:26.609Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T07:27:46.731Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:27:46.749Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T07:27:59.875Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:27:59.877Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\"}","timestamp":"2025-08-09T07:28:14.368Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:28:14.381Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T07:28:24.461Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:28:24.463Z"}
+{"level":"info","message":"Fetching variations with filters: {\"event_id\":\"1\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T07:37:23.417Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:37:23.569Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T07:59:48.754Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T07:59:48.856Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includePricingTiers\":\"true\",\"includeService\":\"true\"}","timestamp":"2025-08-09T08:02:19.558Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T08:02:19.579Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T08:33:52.244Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"2\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T08:33:52.257Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T08:33:52.392Z"}
+{"level":"info","message":"Retrieved 0 variations","timestamp":"2025-08-09T08:33:52.394Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T08:38:34.540Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"2\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T08:38:34.554Z"}
+{"level":"info","message":"Retrieved 0 variations","timestamp":"2025-08-09T08:38:34.569Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T08:38:34.577Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T09:51:51.422Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T09:51:51.538Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T09:56:56.077Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T09:56:56.192Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"2\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T16:32:52.603Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T16:32:52.611Z"}
+{"level":"info","message":"Retrieved 0 variations","timestamp":"2025-08-09T16:32:52.848Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T16:32:52.866Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T17:19:48.359Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T17:19:48.476Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T17:20:52.885Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T17:20:52.891Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T17:26:17.421Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T17:26:17.547Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-09T17:33:51.853Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-09T17:33:52.206Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-10T01:12:03.739Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-10T01:12:03.968Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-10T04:06:48.006Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-10T04:06:48.248Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-10T04:16:46.425Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-10T04:16:46.604Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-10T04:23:46.399Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-10T04:23:46.477Z"}
+{"level":"info","message":"Fetching variations with filters: {\"service_id\":\"1\",\"includeService\":\"true\",\"includePricingTiers\":\"true\"}","timestamp":"2025-08-10T06:39:46.057Z"}
+{"level":"info","message":"Retrieved 1 variations","timestamp":"2025-08-10T06:39:46.203Z"}
